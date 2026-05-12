@@ -1,0 +1,11 @@
+[
+  {
+    "id": "nyaa-tracker",
+    "name": "Domino's Nyaa Extension",
+    "version": "1.0.0",
+    "author": "Domino",
+    "description": "Searches Nyaa for specific titles.",
+    "language": "en",
+    "code": "https://raw.githubusercontent.com/YourUsername/YourRepo/main/nyaa.js"
+  }
+]
