@@ -11,7 +11,7 @@
     "type": "torrent",
     "accuracy": "high",
     "ratio": 0,
-    "media": "sub"
-    "code": "https://raw.githubusercontent.com/king-domino/domino-hayase-repo/main/nyaa.js"
+    "media": "sub",
+    "code": "https://raw.githubusercontent.com/king-domino/domino-hayase-repo/refs/heads/main/nyaa.js",
   }
 ]
