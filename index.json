@@ -1,11 +1,17 @@
 [
   {
+    "manifestVersion": 2,
+    "depreceated": false,
     "id": "nyaa-tracker",
     "name": "Domino's Nyaa Extension",
     "version": "1.0.0",
     "author": "Domino",
     "description": "Searches Nyaa for specific titles.",
-    "language": "en",
+    "languages": ["US"],
+    "type": "torrent",
+    "accuracy": "high",
+    "ratio": 0,
+    "media": "sub"
     "code": "https://raw.githubusercontent.com/YourUsername/YourRepo/main/nyaa.js"
   }
 ]
