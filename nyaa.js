@@ -1,68 +1,96 @@
-class NyaaSource {
-    constructor() {
-        this.name = "Nyaa";
-        this.baseURL = "https://nyaa.si";
+const sizeMap = {
+  KiB: 1024,
+  MiB: 1048576,
+  GiB: 1024 ** 3,
+  TiB: 1024 ** 4
+};
+
+export default new class {
+  url=atob("aHR0cHM6Ly9ueWFhLnNpLw==");
+  async single({media: media, episode: episode, exclusions: exclusions, episodeCount: episodeCount, absoluteEpisodeNumber: absoluteEpisodeNumber}, _, isBatch = !1) {
+    if (!navigator.onLine) return [];
+    
+    if (media.isAdult) return [];
+    
+    const titles = createTitle([ ...Object.values(media.title), ...media.synonyms ]).join(")|("), prequel = findEdge(media, "PREQUEL")?.node, sequel = findEdge(media, "SEQUEL")?.node, absoluteep = absoluteEpisodeNumber ?? episode, episodes = [ episode ];
+    absoluteep !== episode && absoluteep > episodeCount && episodes.push(absoluteep);
+    let ep = "";
+    if (episodeCount > 1) if (isBatch) {
+      const digits = Math.max(2, episodeCount.toString().length);
+      ep = `"${zeropad(1, digits)}-${zeropad(episodeCount, digits)}"|"${zeropad(1, digits)}~${zeropad(episodeCount, digits)}"|"1-${episodeCount}"|"1~${episodeCount}"|"batch"|"complete"${prequel ? "" : '|"S01"'}`;
+    } else ep = `${episodes.map(epstring).join("|")}`;
+    
+    // c=1_2 is for "Anime - English-translated"
+    let entries = parseRSSItems(await getRSSContent(`${this.url}?page=rss&c=1_2&s=seeders&o=desc&q=(${titles})${ep}${exclusions.length ? `-"${exclusions.join('"|"')}"` : ""}`));
+    
+    const checkSequelDate = "FINISHED" === media.status && ("FINISHED" === sequel?.status || "RELEASING" === sequel?.status) && sequel.startDate, sequelStartDate = checkSequelDate && new Date(Object.values(checkSequelDate).join(" ")), checkPrequelDate = ("FINISHED" === media.status || "RELEASING" === media.status) && "FINISHED" === prequel?.status && prequel?.endDate, prequelEndDate = checkPrequelDate && new Date(Object.values(checkPrequelDate).join(" "));
+    return prequelEndDate && (entries = entries.filter(entry => entry.date > new Date(+prequelEndDate + 10699393840))), 
+    sequelStartDate && "TV" === media.format && (entries = entries.filter(entry => entry.date < new Date(+sequelStartDate - 10699393840))), 
+    entries;
+  }
+  batch=(args, opts) => this.single(args, opts, !0);
+  movie=this.batch;
+  async test() {
+    try {
+      if (!(await fetch(this.url)).ok) throw new Error(`Failed to load data from ${this.url}! Is the site down?`);
+      return !0;
+    } catch (error) {
+      throw new Error(`Could not reach ${this.url}! Does the site work in your region?`);
     }
+  }
+};
 
-    async search(query) {
-        // Construct the search URL. On Nyaa, searches look like: /?f=0&c=0_0&q=query
-        const searchUrl = `${this.baseURL}/?f=0&c=0_0&q=${encodeURIComponent(query)}`;
-        
-        try {
-            // Fetch the HTML from the website
-            const response = await fetch(searchUrl);
-            const html = await response.text();
-            
-            return this.parseHTML(html);
-        } catch (error) {
-            console.error("Failed to fetch from Nyaa:", error);
-            return [];
-        }
-    }
-
-    parseHTML(html) {
-        const results = [];
-        // Depending on Hayase's internal parsing engine, you might use a DOMParser
-        // or a library like Cheerio if supported by the environment. 
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
-        
-        // Nyaa's torrent rows are typically stored in a table row: <tr class="default/success/danger">
-        const rows = doc.querySelectorAll('tr');
-
-        rows.forEach(row => {
-            const links = row.querySelectorAll('td:nth-child(2) a');
-            if (links.length === 0) return;
-
-            const titleElement = links[links.length - 1]; 
-            const title = titleElement.getAttribute('title') || titleElement.textContent;
-
-            const downloadLinks = row.querySelectorAll('td:nth-child(3) a');
-            let magnet = "";
-            downloadLinks.forEach(link => {
-                if (link.href.startsWith("magnet:?")) {
-                    magnet = link.href;
-                }
-            });
-
-            const seeders = row.querySelector('td:nth-child(6)')?.textContent || "0";
-            const leechers = row.querySelector('td:nth-child(7)')?.textContent || "0";
-
-            const size = row.querySelector('td:nth-child(4)')?.textContent || "Unknown";
-
-            if (magnet) {
-                results.push({
-                    title: title.trim(),
-                    link: magnet,
-                    seeders: parseInt(seeders),
-                    leechers: parseInt(leechers),
-                    size: size
-                });
-            }
-        });
-
-        return results;
-    }
+function zeropad(v = 1, l = 2) {
+  return ("string" == typeof v ? v : v.toString()).padStart(l, "0");
 }
 
-module.exports = new NyaaSource();
+const epstring = ep => `"E${zeropad(ep)}+"|"E${zeropad(ep)}v"|"+${zeropad(ep)}+"|"+${zeropad(ep)}v"|"+${zeropad(ep)}-"`;
+
+function createTitle(_titles) {
+  const grouped = [ ...new Set(_titles.filter(name => null != name && name.length > 3)) ], titles = [], appendTitle = t => {
+    const title = t.replace(/&/g, "%26").replace(/\?/g, "%3F").replace(/#/g, "%23");
+    titles.push(title);
+    const match1 = title.match(/(\d)(?:nd|rd|th) Season/i), match2 = title.match(/Season (\d)/i);
+    match2 ? titles.push(title.replace(/Season \d/i, `S${match2[1]}`)) : match1 && titles.push(title.replace(/(\d)(?:nd|rd|th) Season/i, `S${match1[1]}`));
+  };
+  for (const t of grouped) appendTitle(t), t.includes("-") && appendTitle(t.replaceAll("-", ""));
+  return titles;
+}
+
+function findEdge(media, type, formats = [ "TV", "TV_SHORT" ], skip) {
+  let res = media.relations.edges.find(edge => edge.relationType === type && formats.includes(edge.node.format));
+  return res || skip || "SEQUEL" !== type || (res = findEdge(media, type, formats = [ "TV", "TV_SHORT", "OVA" ], !0)), 
+  res;
+}
+
+function parseRSSItems(xml) {
+  if (!xml) return [];
+  const items = [], itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  let match;
+  for (;null !== (match = itemRegex.exec(xml)); ) {
+    const itemContent = match[1], title = /<title><!\[CDATA\[(.+?)\]\]><\/title>|<title>(.+?)<\/title>/i.exec(itemContent)?.[1] || itemContent.match(/<title>(.+?)<\/title>/i)?.[1] || "?", link = /<link>(.+?)<\/link>/i.exec(itemContent)?.[1] || "?", pubDate = /<pubDate>(.+?)<\/pubDate>/i.exec(itemContent)?.[1] ?? 0, seeders = Number(/<nyaa:seeders>(.+?)<\/nyaa:seeders>/i.exec(itemContent)?.[1] ?? 0), leechers = Number(/<nyaa:leechers>(.+?)<\/nyaa:leechers>/i.exec(itemContent)?.[1] ?? 0), downloads = Number(/<nyaa:downloads>(.+?)<\/nyaa:downloads>/i.exec(itemContent)?.[1] ?? 0), hash = /<nyaa:infoHash>(.+?)<\/nyaa:infoHash>/i.exec(itemContent)?.[1] ?? "?", sizeMatch = (/<nyaa:size>(.+?)<\/nyaa:size>/i.exec(itemContent)?.[1] ?? "0 KiB").match(/([\d.]+) (KiB|MiB|GiB|TiB)/), sizeInBytes = sizeMatch ? parseFloat(sizeMatch[1]) * (sizeMap[sizeMatch[2]] || 1) : 0;
+    items.push({
+      title: title.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#34;/g, '"'),
+      link: link,
+      seeders: seeders,
+      leechers: leechers,
+      downloads: downloads,
+      size: sizeInBytes,
+      hash: hash,
+      accuracy: "low",
+      date: new Date(pubDate)
+    });
+  }
+  return items;
+}
+
+async function getRSSContent(url) {
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed fetching RSS!\n" + res.statusText);
+    return await res.text();
+  } catch (e) {
+    throw new Error("Failed fetching RSS!\n" + e.message);
+  }
+}
