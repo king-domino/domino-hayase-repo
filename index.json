@@ -5,7 +5,7 @@
     "id": "nyaa-tracker",
     "version": "1.0.0",
     "type": "torrent",
-    "accuracy": "low",
+    "accuracy": "high",
     "ratio": 0,
     "media": "sub",
     "languages": [
