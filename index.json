@@ -1,18 +1,19 @@
 [
   {
     "manifestVersion": 2,
-    "depreceated": false,
+    "name": "Nyaa",
     "id": "nyaa-tracker",
-    "name": "Domino's Nyaa Extension",
     "version": "1.0.0",
-    "author": "Domino",
-    "description": "Searches Nyaa for specific titles.",
-    "languages": ["US"],
     "type": "torrent",
-    "accuracy": "high",
+    "accuracy": "low",
     "ratio": 0,
     "media": "sub",
-    "url": "aHR0cHM6Ly9ueWFhLnNp",
-    "code": "https://raw.githubusercontent.com/king-domino/domino-hayase-repo/refs/heads/main/nyaa.js"
+    "languages": [
+      "US"
+    ],
+    "icon": "https://nyaa.si/static/favicon.png",
+    "update": "https://raw.githubusercontent.com/king-domino/domino-hayase-repo/main/index.json",
+    "code": "https://raw.githubusercontent.com/king-domino/domino-hayase-repo/main/nyaa.js",
+    "url": "aHR0cHM6Ly9ueWFhLnNpLw=="
   }
 ]
